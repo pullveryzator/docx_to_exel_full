@@ -5,6 +5,67 @@ import re
 from time import sleep
 from openpyxl import load_workbook
 
+def save_to_exel(data, output_file, sheet_name):
+    df = pd.DataFrame(data)
+    if os.path.exists(output_file):
+        book = load_workbook(output_file)
+        if sheet_name in book.sheetnames:
+            book.remove(book[sheet_name])
+
+        book.save(output_file)
+
+        with pd.ExcelWriter(output_file, engine='openpyxl', mode='a') as writer:
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+    else:
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+def parse_toc_to_excel(docx_path, output_file):
+    doc = Document(docx_path)
+    sections = []
+    last_main_section_id = 0
+    found_toc = False
+
+    section_pattern = re.compile(r'^(\d+)\.\s+(.*?)\s*\d*$')
+    subsection_pattern = re.compile(r'^(\d+\.\d+)\.\s+(.*?)\s*\d*$')
+    
+    for para in doc.paragraphs:
+        text = para.text.strip()
+
+        if not found_toc:
+            if text.lower() == "оглавление":
+                found_toc = True
+            continue
+        
+        if found_toc and not text:
+            break
+
+        main_section_match = section_pattern.match(text)
+        subsection_match = subsection_pattern.match(text)
+        
+        if main_section_match and not '.' in main_section_match.group(1):
+            section_num = main_section_match.group(1)
+            section_name = main_section_match.group(2)
+            
+            sections.append({
+                'id': len(sections) + 1,
+                'name': f"{section_num}.{section_name}",
+                'parent': 0
+            })
+            last_main_section_id = len(sections)
+            
+        elif subsection_match:
+            subsection_num = subsection_match.group(1)
+            subsection_name = subsection_match.group(2)
+            
+            sections.append({
+                'id': len(sections) + 1,
+                'name': f"{subsection_num}.{subsection_name}",
+                'parent': last_main_section_id
+            })
+
+    save_to_exel(data=sections, output_file=output_file, sheet_name='table_of_contents')
+
 def parse_docx_to_excel(input_file, output_file):
     doc = Document(input_file)
     data = []
@@ -45,10 +106,6 @@ def parse_docx_to_excel(input_file, output_file):
             # Разделяем ID и задачу по первому вхождению табуляции или точки с пробелом
             if '\t' in text:
                 parts = text.split('\t', 1)
-            else:
-                continue
-
-            # sleep(0.5)
 
             id_part = parts[0]
             task_part = parts[1]
@@ -98,93 +155,29 @@ def parse_docx_to_excel(input_file, output_file):
                     'level': 1
                 })
 
-    df = pd.DataFrame(data)
-    with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
-        df.to_excel(writer, sheet_name='tasks', index=False)
-
-def parse_toc_to_excel(docx_path, output_file):
-    doc = Document(docx_path)
-    sections = []
-    last_main_section_id = 0
-    found_toc = False
-
-    section_pattern = re.compile(r'^(\d+)\.\s+(.*?)\s*\d*$')
-    subsection_pattern = re.compile(r'^(\d+\.\d+)\.\s+(.*?)\s*\d*$')
-    
-    for para in doc.paragraphs:
-        text = para.text.strip()
-
-        if not found_toc:
-            if text.lower() == "оглавление":
-                found_toc = True
-            continue
-        
-        if found_toc and not text:
-            break
-
-        main_section_match = section_pattern.match(text)
-        subsection_match = subsection_pattern.match(text)
-        
-        if main_section_match and not '.' in main_section_match.group(1):
-            section_num = main_section_match.group(1)
-            section_name = main_section_match.group(2)
-            
-            sections.append({
-                'id': len(sections) + 1,
-                'name': f"{section_num}.{section_name}",
-                'parent': 0
-            })
-            last_main_section_id = len(sections)
-            
-        elif subsection_match:
-            subsection_num = subsection_match.group(1)
-            subsection_name = subsection_match.group(2)
-            
-            sections.append({
-                'id': len(sections) + 1,
-                'name': f"{subsection_num}.{subsection_name}",
-                'parent': last_main_section_id
-            })
-    
-    if not sections:
-        print("Оглавление не найдено в документе!")
-        return
-    
-    df = pd.DataFrame(sections)
-    
-    if os.path.exists(output_file):
-        book = load_workbook(output_file)
-        if 'table_of_contents' in book.sheetnames:
-            book.remove(book['table_of_contents'])
-
-        with pd.ExcelWriter(output_file, engine='openpyxl', mode='a') as writer:
-            df.to_excel(writer, sheet_name='table_of_contents', index=False)
-    else:
-        df.to_excel(output_file, sheet_name='table_of_contents', index=False)
-
+    save_to_exel(data=data, output_file=output_file, sheet_name='tasks')
 
 def add_author(author_data, output_file):
 
-    df = pd.DataFrame([author_data])
-    if os.path.exists(output_file):
-        book = load_workbook(output_file)
-        if 'author' in book.sheetnames:
-            book.remove(book['author'])
+    save_to_exel(data=author_data, output_file=output_file, sheet_name='author')
 
-        book.save(output_file)
-
-        with pd.ExcelWriter(output_file, engine='openpyxl', mode='a') as writer:
-            df.to_excel(writer, sheet_name='author', index=False)
-    else:
-        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
-            df.to_excel(writer, sheet_name='author', index=False)
-
+def excel_to_dict(excel_file):
+    try:
+        df = pd.read_excel(excel_file, sheet_name='table_of_contents')
+        
+        result_dict = dict(zip(df['id'], df['name']))
+        
+        return result_dict
+        
+    except FileNotFoundError:
+        print(f"Файл {excel_file} не найден!")
+        return None
 
 if __name__ == "__main__":
     
     docx_path = "tekstovye_zadachi_po_matematike.docx"
     output_file="tasks.xlsx"
-    author_data = {
+    author_data = [{
         'name': 'Текстовые задачи по математике. 5–6 классы / А. В. Шевкин. — 3-е изд., перераб. — М. : Илекса, 2024. — 160 с. : ил.',
         'author': ' А. В. Шевкин.',
         'description': 'Сборник включает текстовые задачи по разделам школьной математики: натуральные числа, дроби, пропорции, проценты, уравнения. '
@@ -195,9 +188,7 @@ if __name__ == "__main__":
         'Пособие предназначено для учащихся 5–6 классов общеобразовательных школ, учителей, студентов педагогических вузов. ',
         'topic_id': 1,
         'classes': '5;6'
-        }
-    parse_docx_to_excel(docx_path, output_file)
+        }]
     parse_toc_to_excel(docx_path, output_file)
+    parse_docx_to_excel(docx_path, output_file)
     add_author(author_data, output_file)
-
-
