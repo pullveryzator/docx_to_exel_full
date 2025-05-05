@@ -55,7 +55,6 @@ def parse_docx_to_excel(input_file, output_file):
             if '.' in id_part:
                 main_num = id_part
                 subtask_parts = task_part.split('\t', 1)
-                print(main_num, subtask_parts[0])
                 if len(subtask_parts) == 1:
                     if '*' in main_num:
                         main_num = main_num.replace('*', '')
@@ -71,7 +70,6 @@ def parse_docx_to_excel(input_file, output_file):
                     })
                 if len(subtask_parts) == 2:
                     slave_num = subtask_parts[0].replace(')', '')
-                    print(main_num + slave_num, subtask_parts[1])
                     if '*' in slave_num:
                         slave_num = slave_num.replace('*', '')
                         subtask_parts[1] = '*' + subtask_parts[1]
@@ -87,7 +85,6 @@ def parse_docx_to_excel(input_file, output_file):
                     
             slave_num = id_part.replace(')', '')
             if main_num.strip() != slave_num.strip():
-                print(main_num + slave_num, task_part)
                 if '*' in slave_num:
                     slave_num = slave_num.replace('*', '')
                     task_part = '*' + task_part
