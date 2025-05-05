@@ -163,9 +163,41 @@ def parse_toc_to_excel(docx_path, output_file):
         df.to_excel(output_file, sheet_name='table_of_contents', index=False)
 
 
+def add_author(author_data, output_file):
+
+    df = pd.DataFrame([author_data])
+    if os.path.exists(output_file):
+        book = load_workbook(output_file)
+        if 'author' in book.sheetnames:
+            book.remove(book['author'])
+
+        book.save(output_file)
+
+        with pd.ExcelWriter(output_file, engine='openpyxl', mode='a') as writer:
+            df.to_excel(writer, sheet_name='author', index=False)
+    else:
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='author', index=False)
+
+
 if __name__ == "__main__":
+    
     docx_path = "tekstovye_zadachi_po_matematike.docx"
     output_file="tasks.xlsx"
+    author_data = {
+        'name': 'Текстовые задачи по математике. 5–6 классы / А. В. Шевкин. — 3-е изд., перераб. — М. : Илекса, 2024. — 160 с. : ил.',
+        'author': ' А. В. Шевкин.',
+        'description': 'Сборник включает текстовые задачи по разделам школьной математики: натуральные числа, дроби, пропорции, проценты, уравнения. '
+        'Ко многим задачам даны ответы или советы с чего начать решения. '
+        'Решения некоторых задач приведены в качестве образцов в основном тексте книги или в разделе «Ответы, советы, решения». '
+        'Материалы сборника можно использовать как дополнение к любому действующему учебнику. '
+        'При подготовке этого издания добавлены новые задачи и решения некоторых задач. '
+        'Пособие предназначено для учащихся 5–6 классов общеобразовательных школ, учителей, студентов педагогических вузов. ',
+        'topic_id': 1,
+        'classes': '5;6'
+        }
     parse_docx_to_excel(docx_path, output_file)
     parse_toc_to_excel(docx_path, output_file)
+    add_author(author_data, output_file)
+
 
