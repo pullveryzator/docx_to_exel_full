@@ -141,5 +141,5 @@ dmypy.json
 static/
 media/
 
-.docx
-.xlsx
+*.docx
+*.xlsx
