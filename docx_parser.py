@@ -161,8 +161,7 @@ def parse_toc_to_excel(docx_path, output_file):
             df.to_excel(writer, sheet_name='table_of_contents', index=False)
     else:
         df.to_excel(output_file, sheet_name='table_of_contents', index=False)
-    
-    print(f"Оглавление сохранено в {output_file}")
+
 
 if __name__ == "__main__":
     docx_path = "tekstovye_zadachi_po_matematike.docx"
