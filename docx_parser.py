@@ -95,65 +95,63 @@ def parse_docx_to_excel(input_file, output_file):
                    'Нахождение части числа и числа по его части',
                    'Нахождение числа по его процентам',
         }
-    
+
     for para in doc.paragraphs:
-        text = para.text
+        text = para.text.strip()
         if "Ответы и советы" in text:
             break
         if any(skip_phrase in text for skip_phrase in skip_phrases):
             continue
-        if text:
-            # Разделяем ID и задачу по первому вхождению табуляции или точки с пробелом
-            if '\t' in text:
-                parts = text.split('\t', 1)
 
-            id_part = parts[0]
-            task_part = parts[1]
-            if '.' in id_part:
-                main_num = id_part
-                subtask_parts = task_part.split('\t', 1)
-                if len(subtask_parts) == 1:
-                    if '*' in main_num:
-                        main_num = main_num.replace('*', '')
-                        subtask_parts[0] = '*' + subtask_parts[0]
-                    data.append({
-                        'id_tasks_book': main_num,
-                        'task': subtask_parts[0],
-                        'answers': 'Отсутствует',
-                        'paragraph': 1,
-                        'classes': '5;6',
-                        'topic_id': 1,
-                        'level': 1
-                    })
-                if len(subtask_parts) == 2:
-                    slave_num = subtask_parts[0].replace(')', '')
-                    if '*' in slave_num:
-                        slave_num = slave_num.replace('*', '')
-                        subtask_parts[1] = '*' + subtask_parts[1]
-                    data.append({
-                    'id_tasks_book': main_num + slave_num,
-                    'task': subtask_parts[1],
+        if '\t' in text:
+            parts = text.split('\t', 1)
+        id_part = parts[0].strip()
+        task_part = parts[1].strip()
+        if '.' in id_part:
+            main_num = id_part
+            subtask_parts = task_part.split('\t', 1)
+            if len(subtask_parts) == 1:
+                if '*' in main_num:
+                    main_num = main_num.replace('*', '')
+                    subtask_parts[0] = '*' + subtask_parts[0]
+                data.append({
+                    'id_tasks_book': main_num,
+                    'task': subtask_parts[0],
                     'answers': 'Отсутствует',
                     'paragraph': 1,
                     'classes': '5;6',
                     'topic_id': 1,
                     'level': 1
                 })
-                    
-            slave_num = id_part.replace(')', '')
-            if main_num.strip() != slave_num.strip():
+            if len(subtask_parts) == 2:
+                slave_num = subtask_parts[0].replace(')', '')
                 if '*' in slave_num:
                     slave_num = slave_num.replace('*', '')
-                    task_part = '*' + task_part
+                    subtask_parts[1] = '*' + subtask_parts[1]
                 data.append({
-                    'id_tasks_book': main_num + slave_num,
-                    'task': task_part,
-                    'answers': 'Отсутствует',
-                    'paragraph': 1,
-                    'classes': '5;6',
-                    'topic_id': 1,
-                    'level': 1
-                })
+                'id_tasks_book': main_num + slave_num,
+                'task': subtask_parts[1],
+                'answers': 'Отсутствует',
+                'paragraph': 1,
+                'classes': '5;6',
+                'topic_id': 1,
+                'level': 1
+            })
+                
+        slave_num = id_part.replace(')', '')
+        if main_num.strip() != slave_num.strip():
+            if '*' in slave_num:
+                slave_num = slave_num.replace('*', '')
+                task_part = '*' + task_part
+            data.append({
+                'id_tasks_book': main_num + slave_num,
+                'task': task_part,
+                'answers': 'Отсутствует',
+                'paragraph': 1,
+                'classes': '5;6',
+                'topic_id': 1,
+                'level': 1
+            })
 
     save_to_exel(data=data, output_file=output_file, sheet_name='tasks')
 
