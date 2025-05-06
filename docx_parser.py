@@ -69,38 +69,16 @@ def parse_toc_to_excel(docx_path, output_file):
 def parse_docx_to_excel(input_file, output_file):
     doc = Document(input_file)
     data = []
-    skip_phrases = {'Сложение и вычитание натуральных чисел', 
-                   'Натуральные числа',
-                   'Умножение и деление натуральных чисел',
-                   'Задачи «на части»',
-                   'Задачи на нахождение двух чисел по их сумме и разности',
-                   'Задачи на движение по реке',
-                   'Задачи на движение',
-                   'Разные задачи',
-                   'Дроби',
-                   'Вводные задачи',
-                   'Сложение и вычитание обыкновенных дробей',
-                   'Умножение и деление обыкновенных дробей',
-                   'Задачи «на бассейны» и другие',
-                   'Пропорции',
-                   'Задачи на прямую и обратную пропорциональность',
-                   'Проценты',
-                   'Нахождение процентов числа',
-                   'Нахождение процентного отношения',
-                   'Сложные задачи на проценты',
-                   'Уравнения',
-                   'Решение задач с помощью уравнений',
-                   'Более сложные задачи, решаемые уравнением',
-                   'Задачи на повторение',
-                   'Нахождение части числа и числа по его части',
-                   'Нахождение числа по его процентам',
-        }
+    toc = excel_to_dict(output_file)
 
     for para in doc.paragraphs:
         text = para.text.strip()
         if "Ответы и советы" in text:
             break
-        if any(skip_phrase in text for skip_phrase in skip_phrases):
+
+        cleaned_text = re.sub(r'(\d+\.\d*\.?)\s+', r'\1', text)
+        if cleaned_text in toc:
+            paragraph_id = toc.get(cleaned_text)
             continue
 
         if '\t' in text:
@@ -118,7 +96,7 @@ def parse_docx_to_excel(input_file, output_file):
                     'id_tasks_book': main_num,
                     'task': subtask_parts[0],
                     'answers': 'Отсутствует',
-                    'paragraph': 1,
+                    'paragraph': paragraph_id,
                     'classes': '5;6',
                     'topic_id': 1,
                     'level': 1
@@ -132,7 +110,7 @@ def parse_docx_to_excel(input_file, output_file):
                 'id_tasks_book': main_num + slave_num,
                 'task': subtask_parts[1],
                 'answers': 'Отсутствует',
-                'paragraph': 1,
+                'paragraph': paragraph_id,
                 'classes': '5;6',
                 'topic_id': 1,
                 'level': 1
@@ -147,7 +125,7 @@ def parse_docx_to_excel(input_file, output_file):
                 'id_tasks_book': main_num + slave_num,
                 'task': task_part,
                 'answers': 'Отсутствует',
-                'paragraph': 1,
+                'paragraph': paragraph_id,
                 'classes': '5;6',
                 'topic_id': 1,
                 'level': 1
@@ -163,7 +141,7 @@ def excel_to_dict(excel_file):
     try:
         df = pd.read_excel(excel_file, sheet_name='table_of_contents')
         
-        result_dict = dict(zip(df['id'], df['name']))
+        result_dict = dict(zip(df['name'], df['id']))
         
         return result_dict
         
