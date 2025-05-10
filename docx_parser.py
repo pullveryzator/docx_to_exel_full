@@ -94,7 +94,6 @@ def parse_docx_to_excel(input_file, output_file):
                 data.append({
                     'id_tasks_book': main_num,
                     'task': subtask_parts[0],
-                    'answers': 'Отсутствует',
                     'paragraph': paragraph_id,
                     'classes': '5;6',
                     'topic_id': 1,
@@ -108,7 +107,6 @@ def parse_docx_to_excel(input_file, output_file):
                 data.append({
                 'id_tasks_book': main_num + slave_num,
                 'task': subtask_parts[1],
-                'answers': 'Отсутствует',
                 'paragraph': paragraph_id,
                 'classes': '5;6',
                 'topic_id': 1,
@@ -123,7 +121,6 @@ def parse_docx_to_excel(input_file, output_file):
             data.append({
                 'id_tasks_book': main_num + slave_num,
                 'task': task_part,
-                'answers': 'Отсутствует',
                 'paragraph': paragraph_id,
                 'classes': '5;6',
                 'topic_id': 1,
@@ -165,12 +162,12 @@ def parse_answers(docx_path, output_file):
                 subtask = subtask.replace(')', '')
                 task_id = f"{main_num}.{subtask}" if subtask.isalpha() else f"{main_num}.{subtask}"
             else:
-                task_id = main_num
+                task_id = f"{main_num}."
 
             answers_dict[task_id] = re.sub(r'[.,;]$', '', answer_text).strip()
 
     tasks_df = pd.read_excel(output_file, sheet_name='tasks')
-    tasks_df['answer'] = tasks_df['id_tasks_book'].map(answers_dict)
+    tasks_df['answer'] = tasks_df['id_tasks_book'].map(answers_dict).fillna('Отсутствует')
     with pd.ExcelWriter(output_file, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
         tasks_df.to_excel(writer, index=False, sheet_name='tasks')
 
