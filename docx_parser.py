@@ -94,6 +94,7 @@ def parse_docx_to_excel(input_file, output_file):
                 data.append({
                     'id_tasks_book': main_num,
                     'task': subtask_parts[0],
+                    'answer': '',
                     'paragraph': paragraph_id,
                     'classes': '5;6',
                     'topic_id': 1,
@@ -107,6 +108,7 @@ def parse_docx_to_excel(input_file, output_file):
                 data.append({
                 'id_tasks_book': main_num + slave_num,
                 'task': subtask_parts[1],
+                'answer': '',
                 'paragraph': paragraph_id,
                 'classes': '5;6',
                 'topic_id': 1,
@@ -121,6 +123,7 @@ def parse_docx_to_excel(input_file, output_file):
             data.append({
                 'id_tasks_book': main_num + slave_num,
                 'task': task_part,
+                'answer': '',
                 'paragraph': paragraph_id,
                 'classes': '5;6',
                 'topic_id': 1,
