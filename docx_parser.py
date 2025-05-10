@@ -2,7 +2,6 @@ from docx import Document
 import pandas as pd
 import os
 import re
-from time import sleep
 from openpyxl import load_workbook
 
 def save_to_exel(data, output_file, sheet_name):
@@ -20,8 +19,8 @@ def save_to_exel(data, output_file, sheet_name):
         with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
             df.to_excel(writer, sheet_name=sheet_name, index=False)
 
-def parse_toc_to_excel(docx_path, output_file):
-    doc = Document(docx_path)
+def parse_toc_to_excel(input_file, output_file):
+    doc = Document(input_file)
     sections = []
     last_main_section_id = 0
     found_toc = False
@@ -133,6 +132,48 @@ def parse_docx_to_excel(input_file, output_file):
 
     save_to_exel(data=data, output_file=output_file, sheet_name='tasks')
 
+def parse_answers(docx_path, output_file):
+    doc = Document(docx_path)
+    answers_dict = {}
+    answer_block_re = re.compile(r'(\d+)\.(.*?)(?=\d+\.|\Z)', re.DOTALL)
+    answer_item_re = re.compile(
+        r'([а-я]\)|\d+\))?\s*([^;.]*[;.]?)',
+        re.DOTALL
+    )
+
+    full_text = "\n".join([para.text for para in doc.paragraphs])
+
+    answers_start = full_text.find("Ответы и советы")
+    answers_end = full_text.find('Оглавление')
+    answers_text = full_text[answers_start:answers_end]
+
+    for block in answer_block_re.finditer(answers_text):
+        main_num = block.group(1)
+        content = block.group(2).strip()
+
+        answer_items = [a.strip() for a in content.split(';') if a.strip()]
+        
+        for item in answer_items:
+            match = answer_item_re.match(item)
+            if not match:
+                continue
+                
+            subtask = match.group(1)
+            answer_text = match.group(2).strip()
+
+            if subtask:
+                subtask = subtask.replace(')', '')
+                task_id = f"{main_num}.{subtask}" if subtask.isalpha() else f"{main_num}.{subtask}"
+            else:
+                task_id = main_num
+
+            answers_dict[task_id] = re.sub(r'[.,;]$', '', answer_text).strip()
+
+    tasks_df = pd.read_excel(output_file, sheet_name='tasks')
+    tasks_df['answer'] = tasks_df['id_tasks_book'].map(answers_dict)
+    with pd.ExcelWriter(output_file, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+        tasks_df.to_excel(writer, index=False, sheet_name='tasks')
+
 def add_author(author_data, output_file):
 
     save_to_exel(data=author_data, output_file=output_file, sheet_name='author')
@@ -168,3 +209,4 @@ if __name__ == "__main__":
     parse_toc_to_excel(docx_path, output_file)
     parse_docx_to_excel(docx_path, output_file)
     add_author(author_data, output_file)
+    parse_answers(docx_path, output_file)
