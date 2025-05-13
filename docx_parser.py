@@ -5,12 +5,13 @@ import pandas as pd
 from docx import Document
 from openpyxl import load_workbook
 
-from constants import AUTHOR_DATA, CLASSES, LEVEL, TOPIC_ID, DOCX_PATH, OUTPUT_FILE
+from constants import (AUTHOR_DATA, CLASSES, DOCX_PATH, LEVEL, OUTPUT_FILE,
+                       TOPIC_ID)
 from decorators import validate_docx_file
-from filters import fix_difficult_tasks_symb
+from filters import fix_degree_to_star, fix_difficult_tasks_symb
 
 
-def save_to_exel(data, output_file, sheet_name):
+def save_to_exel(data, output_file:str, sheet_name:str):
     """Сохранение данных в Excel с автоматическим удалением существующего листа."""
     df = pd.DataFrame(data)
     mode = 'a' if os.path.exists(output_file) else 'w'
@@ -24,7 +25,7 @@ def save_to_exel(data, output_file, sheet_name):
 
 
 @validate_docx_file
-def parse_toc_to_excel(input_file, output_file):
+def parse_toc_to_excel(input_file:str, output_file:str):
     """Парсинг оглавления в Excel."""
     doc = Document(input_file)
     sections = []
@@ -73,7 +74,7 @@ def parse_toc_to_excel(input_file, output_file):
 
 
 @validate_docx_file
-def parse_docx_to_excel(input_file, output_file):
+def parse_docx_to_excel(input_file:str, output_file:str):
     """Парсинг текста задач в Excel."""
     doc = Document(input_file)
     data = []
@@ -81,6 +82,7 @@ def parse_docx_to_excel(input_file, output_file):
 
     for para in doc.paragraphs:
         text = para.text.strip()
+        text = fix_degree_to_star(text)
         if "Ответы и советы" in text:
             break
 
@@ -96,7 +98,7 @@ def parse_docx_to_excel(input_file, output_file):
             main_num = id_part
             subtask_parts = task_part.split('\t', 1)
             if len(subtask_parts) == 1:
-                fix_difficult_tasks_symb(main_num, subtask_parts, 0)
+                main_num, subtask_parts = fix_difficult_tasks_symb(main_num, subtask_parts, 0)
                 data.append({
                     'id_tasks_book': main_num,
                     'task': subtask_parts[0],
@@ -108,7 +110,7 @@ def parse_docx_to_excel(input_file, output_file):
                 })
             if len(subtask_parts) == 2:
                 slave_num = subtask_parts[0].replace(')', '')
-                fix_difficult_tasks_symb(slave_num, subtask_parts, 1)
+                slave_num, subtask_parts = fix_difficult_tasks_symb(slave_num, subtask_parts, 1)
                 data.append({
                 'id_tasks_book': main_num + slave_num,
                 'task': subtask_parts[1],
@@ -121,7 +123,7 @@ def parse_docx_to_excel(input_file, output_file):
                 
         slave_num = id_part.replace(')', '')
         if main_num.strip() != slave_num.strip():
-            fix_difficult_tasks_symb(slave_num, task_part)
+            slave_num, task_part = fix_difficult_tasks_symb(slave_num, task_part)
             data.append({
                 'id_tasks_book': main_num + slave_num,
                 'task': task_part,
@@ -136,7 +138,7 @@ def parse_docx_to_excel(input_file, output_file):
 
 
 @validate_docx_file
-def parse_answers(docx_path, output_file):
+def parse_answers(docx_path: str, output_file: str):
     """Парсинг ответов в Excel."""
     doc = Document(docx_path)
     answers_dict = {}
@@ -180,12 +182,12 @@ def parse_answers(docx_path, output_file):
         tasks_df.to_excel(writer, index=False, sheet_name='tasks')
 
 
-def add_author(author_data, output_file):
+def add_author(author_data: list[dict], output_file:str):
     """Добавление к Excel файлу листа авторов."""
     save_to_exel(data=author_data, output_file=output_file, sheet_name='author')
 
 
-def excel_to_dict(excel_file):
+def excel_to_dict(excel_file: str):
     """Получение словаря из Excel файла,
     в котором ключи - это текст главы, а значения - столбец ID.
     Включена обработка ошибки на отсутствие нужного файла."""
