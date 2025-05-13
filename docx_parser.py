@@ -5,7 +5,7 @@ import pandas as pd
 from docx import Document
 from openpyxl import load_workbook
 
-from constants import AUTHOR, CLASSES, DESCRIPTION, LEVEL, NAME, TOPIC_ID
+from constants import AUTHOR_DATA, CLASSES, LEVEL, TOPIC_ID, DOCX_PATH, OUTPUT_FILE
 from decorators import validate_docx_file
 from filters import fix_difficult_tasks_symb
 
@@ -201,18 +201,8 @@ def excel_to_dict(excel_file):
         return None
 
 if __name__ == "__main__":
-    
-    docx_path = "tekstovye_zadachi_po_matematike.docx"
-    output_file="tasks.xlsx"
-    author_data = [
-        {'name': NAME,
-        'author': AUTHOR,
-        'description': DESCRIPTION,
-        'topic_id': TOPIC_ID,
-        'classes': CLASSES
-        }
-    ]
-    parse_toc_to_excel(docx_path, output_file)
-    parse_docx_to_excel(docx_path, output_file)
-    add_author(author_data, output_file)
-    parse_answers(docx_path, output_file)
+
+    parse_toc_to_excel(DOCX_PATH, OUTPUT_FILE)
+    parse_docx_to_excel(DOCX_PATH, OUTPUT_FILE)
+    add_author(AUTHOR_DATA, OUTPUT_FILE)
+    parse_answers(DOCX_PATH, OUTPUT_FILE)
