@@ -1,25 +1,31 @@
-from docx import Document
-import pandas as pd
 import os
 import re
+
+import pandas as pd
+from docx import Document
 from openpyxl import load_workbook
 
+from constants import AUTHOR, CLASSES, DESCRIPTION, LEVEL, NAME, TOPIC_ID
+from decorators import validate_docx_file
+from filters import fix_difficult_tasks_symb
+
+
 def save_to_exel(data, output_file, sheet_name):
+    """Сохранение данных в Excel с автоматическим удалением существующего листа."""
     df = pd.DataFrame(data)
-    if os.path.exists(output_file):
+    mode = 'a' if os.path.exists(output_file) else 'w'
+    if mode == 'a':
         book = load_workbook(output_file)
         if sheet_name in book.sheetnames:
             book.remove(book[sheet_name])
-
         book.save(output_file)
+    with pd.ExcelWriter(output_file, engine='openpyxl', mode=mode) as writer:
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
 
-        with pd.ExcelWriter(output_file, engine='openpyxl', mode='a') as writer:
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
-    else:
-        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
 
+@validate_docx_file
 def parse_toc_to_excel(input_file, output_file):
+    """Парсинг оглавления в Excel."""
     doc = Document(input_file)
     sections = []
     last_main_section_id = 0
@@ -65,7 +71,10 @@ def parse_toc_to_excel(input_file, output_file):
 
     save_to_exel(data=sections, output_file=output_file, sheet_name='table_of_contents')
 
+
+@validate_docx_file
 def parse_docx_to_excel(input_file, output_file):
+    """Парсинг текста задач в Excel."""
     doc = Document(input_file)
     data = []
     toc = excel_to_dict(output_file)
@@ -78,7 +87,6 @@ def parse_docx_to_excel(input_file, output_file):
         cleaned_text = re.sub(r'(\d+\.\d*\.?)\s+', r'\1', text)
         if cleaned_text in toc:
             paragraph_id = toc.get(cleaned_text)
-            continue
 
         if '\t' in text:
             parts = text.split('\t', 1)
@@ -88,51 +96,48 @@ def parse_docx_to_excel(input_file, output_file):
             main_num = id_part
             subtask_parts = task_part.split('\t', 1)
             if len(subtask_parts) == 1:
-                if '*' in main_num:
-                    main_num = main_num.replace('*', '')
-                    subtask_parts[0] = '*' + subtask_parts[0]
+                fix_difficult_tasks_symb(main_num, subtask_parts, 0)
                 data.append({
                     'id_tasks_book': main_num,
                     'task': subtask_parts[0],
                     'answer': '',
                     'paragraph': paragraph_id,
-                    'classes': '5;6',
-                    'topic_id': 1,
-                    'level': 1
+                    'classes': CLASSES,
+                    'topic_id': TOPIC_ID,
+                    'level': LEVEL
                 })
             if len(subtask_parts) == 2:
                 slave_num = subtask_parts[0].replace(')', '')
-                if '*' in slave_num:
-                    slave_num = slave_num.replace('*', '')
-                    subtask_parts[1] = '*' + subtask_parts[1]
+                fix_difficult_tasks_symb(slave_num, subtask_parts, 1)
                 data.append({
                 'id_tasks_book': main_num + slave_num,
                 'task': subtask_parts[1],
                 'answer': '',
                 'paragraph': paragraph_id,
-                'classes': '5;6',
-                'topic_id': 1,
-                'level': 1
+                'classes': CLASSES,
+                'topic_id': TOPIC_ID,
+                'level': LEVEL
             })
                 
         slave_num = id_part.replace(')', '')
         if main_num.strip() != slave_num.strip():
-            if '*' in slave_num:
-                slave_num = slave_num.replace('*', '')
-                task_part = '*' + task_part
+            fix_difficult_tasks_symb(slave_num, task_part)
             data.append({
                 'id_tasks_book': main_num + slave_num,
                 'task': task_part,
                 'answer': '',
                 'paragraph': paragraph_id,
-                'classes': '5;6',
-                'topic_id': 1,
-                'level': 1
+                'classes': CLASSES,
+                'topic_id': TOPIC_ID,
+                'level': LEVEL
             })
 
     save_to_exel(data=data, output_file=output_file, sheet_name='tasks')
 
+
+@validate_docx_file
 def parse_answers(docx_path, output_file):
+    """Парсинг ответов в Excel."""
     doc = Document(docx_path)
     answers_dict = {}
     answer_block_re = re.compile(r'(\d+)\.(.*?)(?=\d+\.|\Z)', re.DOTALL)
@@ -174,11 +179,16 @@ def parse_answers(docx_path, output_file):
     with pd.ExcelWriter(output_file, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
         tasks_df.to_excel(writer, index=False, sheet_name='tasks')
 
-def add_author(author_data, output_file):
 
+def add_author(author_data, output_file):
+    """Добавление к Excel файлу листа авторов."""
     save_to_exel(data=author_data, output_file=output_file, sheet_name='author')
 
+
 def excel_to_dict(excel_file):
+    """Получение словаря из Excel файла,
+    в котором ключи - это текст главы, а значения - столбец ID.
+    Включена обработка ошибки на отсутствие нужного файла."""
     try:
         df = pd.read_excel(excel_file, sheet_name='table_of_contents')
         
@@ -194,18 +204,14 @@ if __name__ == "__main__":
     
     docx_path = "tekstovye_zadachi_po_matematike.docx"
     output_file="tasks.xlsx"
-    author_data = [{
-        'name': 'Текстовые задачи по математике. 5–6 классы / А. В. Шевкин. — 3-е изд., перераб. — М. : Илекса, 2024. — 160 с. : ил.',
-        'author': ' А. В. Шевкин.',
-        'description': 'Сборник включает текстовые задачи по разделам школьной математики: натуральные числа, дроби, пропорции, проценты, уравнения. '
-        'Ко многим задачам даны ответы или советы с чего начать решения. '
-        'Решения некоторых задач приведены в качестве образцов в основном тексте книги или в разделе «Ответы, советы, решения». '
-        'Материалы сборника можно использовать как дополнение к любому действующему учебнику. '
-        'При подготовке этого издания добавлены новые задачи и решения некоторых задач. '
-        'Пособие предназначено для учащихся 5–6 классов общеобразовательных школ, учителей, студентов педагогических вузов. ',
-        'topic_id': 1,
-        'classes': '5;6'
-        }]
+    author_data = [
+        {'name': NAME,
+        'author': AUTHOR,
+        'description': DESCRIPTION,
+        'topic_id': TOPIC_ID,
+        'classes': CLASSES
+        }
+    ]
     parse_toc_to_excel(docx_path, output_file)
     parse_docx_to_excel(docx_path, output_file)
     add_author(author_data, output_file)
