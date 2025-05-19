@@ -11,7 +11,7 @@ from decorators import validate_docx_file
 from filters import fix_degree_to_star, fix_difficult_tasks_symb
 
 
-def save_to_exel(data, output_file:str, sheet_name:str):
+def save_to_excel(data, output_file:str, sheet_name:str):
     """Сохранение данных в Excel с автоматическим удалением существующего листа."""
     df = pd.DataFrame(data)
     mode = 'a' if os.path.exists(output_file) else 'w'
@@ -70,7 +70,7 @@ def parse_toc_to_excel(input_file:str, output_file:str):
                 'parent': last_main_section_id
             })
 
-    save_to_exel(data=sections, output_file=output_file, sheet_name='table_of_contents')
+    save_to_excel(data=sections, output_file=output_file, sheet_name='table_of_contents')
 
 
 @validate_docx_file
@@ -134,7 +134,7 @@ def parse_docx_to_excel(input_file:str, output_file:str):
                 'level': LEVEL
             })
 
-    save_to_exel(data=data, output_file=output_file, sheet_name='tasks')
+    save_to_excel(data=data, output_file=output_file, sheet_name='tasks')
 
 
 @validate_docx_file
@@ -184,7 +184,7 @@ def parse_answers(docx_path: str, output_file: str):
 
 def add_author(author_data: list[dict], output_file:str):
     """Добавление к Excel файлу листа авторов."""
-    save_to_exel(data=author_data, output_file=output_file, sheet_name='author')
+    save_to_excel(data=author_data, output_file=output_file, sheet_name='author')
 
 
 def excel_to_dict(excel_file: str):
