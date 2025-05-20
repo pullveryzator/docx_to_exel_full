@@ -9,6 +9,7 @@ from constants import (AUTHOR_DATA, CLASSES, DOCX_PATH, LEVEL, OUTPUT_FILE,
                        TOPIC_ID)
 from decorators import validate_docx_file
 from filters import fix_degree_to_star, fix_difficult_tasks_symb
+from ai_solution import add_ai_solution_to_excel
 
 
 def save_to_excel(data, output_file:str, sheet_name:str):
@@ -89,6 +90,7 @@ def parse_docx_to_excel(input_file:str, output_file:str):
         cleaned_text = re.sub(r'(\d+\.\d*\.?)\s+', r'\1', text)
         if cleaned_text in toc:
             paragraph_id = toc.get(cleaned_text)
+            continue
 
         if '\t' in text:
             parts = text.split('\t', 1)
@@ -208,3 +210,5 @@ if __name__ == "__main__":
     parse_docx_to_excel(DOCX_PATH, OUTPUT_FILE)
     add_author(AUTHOR_DATA, OUTPUT_FILE)
     parse_answers(DOCX_PATH, OUTPUT_FILE)
+    add_ai_solution_to_excel(OUTPUT_FILE)
+    
