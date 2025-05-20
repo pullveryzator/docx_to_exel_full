@@ -5,11 +5,11 @@ import pandas as pd
 from docx import Document
 from openpyxl import load_workbook
 
+from ai_solution import add_ai_solution_to_excel
 from constants import (AUTHOR_DATA, CLASSES, DOCX_PATH, LEVEL, OUTPUT_FILE,
                        TOPIC_ID)
 from decorators import validate_docx_file
 from filters import fix_degree_to_star, fix_difficult_tasks_symb
-from ai_solution import add_ai_solution_to_excel
 
 
 def save_to_excel(data, output_file:str, sheet_name:str):
