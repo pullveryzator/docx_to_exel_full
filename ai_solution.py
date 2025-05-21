@@ -1,5 +1,6 @@
 import os
 import time
+from typing import Optional
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -10,11 +11,14 @@ from constants import (ADVICE, ID_TASK_COLUMN, MISTRAL_MODEL, SHEET_NAME,
                        TIME_SLEEP)
 
 load_dotenv()
-MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
+MISTRAL_API_KEY: Optional[str] = os.getenv("MISTRAL_API_KEY")
 
-def get_ai_solution(task_number, task_text):
+def get_ai_solution(task_number: int, task_text: str) -> str:
     """Отправляет задачу в Mistral API и возвращает решение."""
-    client = Mistral(api_key=MISTRAL_API_KEY)
+    if not MISTRAL_API_KEY:
+        return "Ошибка: не задан API ключ"
+    
+    client: Mistral = Mistral(api_key=MISTRAL_API_KEY)
 
     try:
         chat_response = client.chat.complete(
@@ -25,16 +29,20 @@ def get_ai_solution(task_number, task_text):
                   },
             ]
         )
-        solution = (chat_response.choices[0].message.content)
+        solution: str = chat_response.choices[0].message.content
         return solution.strip()
     except Exception as e:
         print(f"Ошибка при запросе к API: {e}")
         return "Ошибка: не удалось получить решение"
 
-def add_ai_solution_to_excel(file_path):
+def add_ai_solution_to_excel(file_path: str) -> None:
     """Обновляет Excel-файл, используя pandas"""
     try:
-        df = pd.read_excel(file_path, engine='openpyxl', sheet_name=SHEET_NAME)
+        df: pd.DataFrame = pd.read_excel(
+            file_path, 
+            engine='openpyxl', 
+            sheet_name=SHEET_NAME
+        )
 
         if SOLUTION_COLUMN not in df.columns:
             df[SOLUTION_COLUMN] = None
@@ -43,8 +51,8 @@ def add_ai_solution_to_excel(file_path):
             raise ValueError(f"Колонка '{TASK_COLUMN}' не найдена!")
         
         # Обрабатываем только строки, где есть задача и нет решения
-        mask = df[TASK_COLUMN].notna() & df[SOLUTION_COLUMN].isna()
-        tasks_to_process = df[mask]
+        mask: pd.Series = df[TASK_COLUMN].notna() & df[SOLUTION_COLUMN].isna()
+        tasks_to_process: pd.DataFrame = df[mask]
         
         if tasks_to_process.empty:
             print("Нет задач для обработки.")
@@ -53,10 +61,10 @@ def add_ai_solution_to_excel(file_path):
         print(f"Найдено {len(tasks_to_process)} задач для обработки...")
 
         for index, row in tasks_to_process.iterrows():
-            task = row[TASK_COLUMN]
-            task_number = row[ID_TASK_COLUMN]
+            task: str = row[TASK_COLUMN]
+            task_number: int = row[ID_TASK_COLUMN]
             print(f"Обработка задачи: {task_number} {task[:TASK_SLICE_LENGTH]}...")
-            solution = get_ai_solution(task_number, task)
+            solution: str = get_ai_solution(task_number, task)
 
             df.at[index, SOLUTION_COLUMN] = solution
             
@@ -70,3 +78,4 @@ def add_ai_solution_to_excel(file_path):
         
     except Exception as e:
         print(f"Произошла ошибка: {str(e)}")
+        
