@@ -8,7 +8,7 @@ from constants import (AUTHOR_DATA, CLASSES, DOCX_PATH, LEVEL, OUTPUT_FILE,
                        TOPIC_ID)
 from decorators import validate_docx_file
 from filters import fix_degree_to_star, fix_difficult_tasks_symb
-from utils import save_to_excel
+from utils import excel_to_dict, reorder_sheets, save_to_excel
 
 
 @validate_docx_file
@@ -175,21 +175,6 @@ def add_author(author_data: list[dict], output_file:str):
     save_to_excel(data=author_data, output_file=output_file, sheet_name='author')
 
 
-def excel_to_dict(excel_file: str):
-    """Получение словаря из Excel файла,
-    в котором ключи - это текст главы, а значения - столбец ID.
-    Включена обработка ошибки на отсутствие нужного файла."""
-    try:
-        df = pd.read_excel(excel_file, sheet_name='table_of_contents')
-        
-        result_dict = dict(zip(df['name'], df['id']))
-        
-        return result_dict
-        
-    except FileNotFoundError:
-        print(f"Файл {excel_file} не найден!")
-        return None
-
 if __name__ == "__main__":
 
     parse_toc_to_excel(DOCX_PATH, OUTPUT_FILE)
@@ -197,4 +182,5 @@ if __name__ == "__main__":
     add_author(AUTHOR_DATA, OUTPUT_FILE)
     parse_answers(DOCX_PATH, OUTPUT_FILE)
     add_ai_solution_to_excel(OUTPUT_FILE)
+    reorder_sheets(OUTPUT_FILE)
     
