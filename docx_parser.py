@@ -1,28 +1,14 @@
-import os
 import re
 
 import pandas as pd
 from docx import Document
-from openpyxl import load_workbook
 
 from ai_solution import add_ai_solution_to_excel
 from constants import (AUTHOR_DATA, CLASSES, DOCX_PATH, LEVEL, OUTPUT_FILE,
                        TOPIC_ID)
 from decorators import validate_docx_file
 from filters import fix_degree_to_star, fix_difficult_tasks_symb
-
-
-def save_to_excel(data, output_file:str, sheet_name:str):
-    """Сохранение данных в Excel с автоматическим удалением существующего листа."""
-    df = pd.DataFrame(data)
-    mode = 'a' if os.path.exists(output_file) else 'w'
-    if mode == 'a':
-        book = load_workbook(output_file)
-        if sheet_name in book.sheetnames:
-            book.remove(book[sheet_name])
-        book.save(output_file)
-    with pd.ExcelWriter(output_file, engine='openpyxl', mode=mode) as writer:
-        df.to_excel(writer, sheet_name=sheet_name, index=False)
+from utils import save_to_excel
 
 
 @validate_docx_file

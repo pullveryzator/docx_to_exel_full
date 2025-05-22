@@ -19,9 +19,9 @@ AUTHOR_DATA = [
         'classes': CLASSES
         }
     ]
-TIME_SLEEP = 3
+TIME_SLEEP = 2
 TASK_SLICE_LENGTH = 50
-SHEET_NAME = "tasks"
+TASK_SHEET_NAME = "tasks"
 TASK_COLUMN = "task"
 ID_TASK_COLUMN = "id_tasks_book"
 SOLUTION_COLUMN = "AI_solution"
