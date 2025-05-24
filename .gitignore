@@ -140,6 +140,7 @@ dmypy.json
 
 static/
 media/
+artefacts_pytorch/
 
 *.docx
 *.xlsx

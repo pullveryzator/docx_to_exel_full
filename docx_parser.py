@@ -4,8 +4,8 @@ import pandas as pd
 from docx import Document
 
 from ai_solution import add_ai_solution_to_excel
-from constants import (AUTHOR_DATA, CLASSES, DOCX_PATH, LEVEL, OUTPUT_FILE,
-                       TOPIC_ID)
+from classifier import process_topics
+from constants import AUTHOR_DATA, CLASSES, DOCX_PATH, OUTPUT_FILE
 from decorators import validate_docx_file
 from filters import fix_degree_to_star, fix_difficult_tasks_symb
 from utils import excel_to_dict, reorder_sheets, save_to_excel
@@ -93,8 +93,6 @@ def parse_docx_to_excel(input_file:str, output_file:str):
                     'answer': '',
                     'paragraph': paragraph_id,
                     'classes': CLASSES,
-                    'topic_id': TOPIC_ID,
-                    'level': LEVEL
                 })
             if len(subtask_parts) == 2:
                 slave_num = subtask_parts[0].replace(')', '')
@@ -105,8 +103,6 @@ def parse_docx_to_excel(input_file:str, output_file:str):
                 'answer': '',
                 'paragraph': paragraph_id,
                 'classes': CLASSES,
-                'topic_id': TOPIC_ID,
-                'level': LEVEL
             })
                 
         slave_num = id_part.replace(')', '')
@@ -118,8 +114,6 @@ def parse_docx_to_excel(input_file:str, output_file:str):
                 'answer': '',
                 'paragraph': paragraph_id,
                 'classes': CLASSES,
-                'topic_id': TOPIC_ID,
-                'level': LEVEL
             })
 
     save_to_excel(data=data, output_file=output_file, sheet_name='tasks')
@@ -183,4 +177,5 @@ if __name__ == "__main__":
     parse_answers(DOCX_PATH, OUTPUT_FILE)
     add_ai_solution_to_excel(OUTPUT_FILE)
     reorder_sheets(OUTPUT_FILE)
+    process_topics(OUTPUT_FILE)
     

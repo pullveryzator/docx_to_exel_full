@@ -2,9 +2,10 @@ AUTHOR = ' А. В. Шевкин.'
 CLASSES = '5;6'
 NAME = 'Текстовые задачи по математике. 5–6 классы / А. В. Шевкин. — 3-е изд., перераб. — М. : Илекса, 2024. — 160 с. : ил.'
 TOPIC_ID = 1
-LEVEL = 1
 DOCX_PATH = "tekstovye_zadachi_po_matematike.docx"
+DEST_FOLDER = "./artefacts_pytorch"
 OUTPUT_FILE="tasks.xlsx"
+BATCH_SIZE = 32
 DESCRIPTION = 'Сборник включает текстовые задачи по разделам школьной математики: натуральные числа, дроби, пропорции, проценты, уравнения. ' \
 'Ко многим задачам даны ответы или советы с чего начать решения. '
 'Решения некоторых задач приведены в качестве образцов в основном тексте книги или в разделе «Ответы, советы, решения». '
@@ -19,7 +20,8 @@ AUTHOR_DATA = [
         'classes': CLASSES
         }
     ]
-TIME_SLEEP = 2
+GOOGLE_DRIVE_COMMON_PATH = "https://drive.google.com/uc?id"
+TIME_SLEEP = 3
 TASK_SLICE_LENGTH = 50
 TASK_SHEET_NAME = "tasks"
 TASK_COLUMN = "task"
