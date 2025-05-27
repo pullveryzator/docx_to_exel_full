@@ -3,12 +3,12 @@ import re
 import pandas as pd
 from docx import Document
 
-from ai_solution import add_ai_solution_to_excel
-from classifier import process_topics
+# from ai_solution import add_ai_solution_to_excel
+# from classifier import process_topics
 from constants import AUTHOR_DATA, CLASSES, DOCX_PATH, OUTPUT_FILE
 from decorators import validate_docx_file
-from filters import fix_degree_to_star, fix_difficult_tasks_symb
-from utils import excel_to_dict, reorder_sheets, save_to_excel
+from filters import fix_degree_to_star, fix_difficult_tasks_symb, filter_trailing_dots
+from utils import excel_to_dict, reorder_sheets, save_to_excel, find_matching_paragraph
 
 
 @validate_docx_file
@@ -50,10 +50,12 @@ def parse_toc_to_excel(input_file:str, output_file:str):
         elif subsection_match:
             subsection_num = subsection_match.group(1)
             subsection_name = subsection_match.group(2)
+            full_name = f"{subsection_num}.{subsection_name}"
+            full_name = filter_trailing_dots(full_name)
             
             sections.append({
                 'id': len(sections) + 1,
-                'name': f"{subsection_num}.{subsection_name}",
+                'name': full_name,
                 'parent': last_main_section_id
             })
 
@@ -74,8 +76,10 @@ def parse_docx_to_excel(input_file:str, output_file:str):
             break
 
         cleaned_text = re.sub(r'(\d+\.\d*\.?)\s+', r'\1', text)
-        if cleaned_text in toc:
-            paragraph_id = toc.get(cleaned_text)
+        paragraph_id = find_matching_paragraph(cleaned_text, toc, trim_chars=5)
+
+        if paragraph_id:
+            print(f"Найдено совпадение: {cleaned_text}")
             continue
 
         if '\t' in text:
@@ -175,7 +179,7 @@ if __name__ == "__main__":
     parse_docx_to_excel(DOCX_PATH, OUTPUT_FILE)
     add_author(AUTHOR_DATA, OUTPUT_FILE)
     parse_answers(DOCX_PATH, OUTPUT_FILE)
-    add_ai_solution_to_excel(OUTPUT_FILE)
+    # add_ai_solution_to_excel(OUTPUT_FILE)
     reorder_sheets(OUTPUT_FILE)
-    process_topics(OUTPUT_FILE)
+    # process_topics(OUTPUT_FILE)
     

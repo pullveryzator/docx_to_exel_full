@@ -45,3 +45,26 @@ def excel_to_dict(excel_file: str):
     except FileNotFoundError:
         print(f"Файл {excel_file} не найден!")
         return None
+
+
+def find_matching_paragraph(cleaned_text: str, toc: dict, trim_chars: int = 2) -> int:
+    """
+    Ищет наилучшее совпадение в словаре оглавления с возможностью обрезки символов.
+    
+    Параметры:
+        cleaned_text - обработанный текст параграфа
+        toc - словарь оглавления {название: id}
+        trim_chars - количество символов для обрезки с конца (по умолчанию 2)
+    """
+    # Пробуем точное совпадение в первую очередь
+    if cleaned_text in toc:
+        return toc[cleaned_text]
+    
+    # Пробуем разные варианты обрезки
+    for i in range(1, trim_chars + 1):
+        truncated = cleaned_text[:-i] if len(cleaned_text) > i else cleaned_text
+        for key in toc:
+            if key.startswith(truncated):
+                return toc[key]
+    
+    return None

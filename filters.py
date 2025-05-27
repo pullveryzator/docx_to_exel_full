@@ -1,3 +1,6 @@
+import re
+
+
 def fix_difficult_tasks_symb(input_num: str, input_task_part, index: int = None) -> str:
     """
     Обрабатывает маркер сложности (*) в задачах.
@@ -36,3 +39,15 @@ def fix_degree_to_star(value: str) -> str:
         modified = value.replace('°', '*')
         return modified
     return value
+
+
+def filter_trailing_dots(text):
+    """Удаляет возможные лишние точки в оглавлении перед номером страницы."""
+    pattern = re.compile(r'^(\d+\.\d+)\.(.*?)(\.+)$')
+    match = pattern.match(text)
+    if match:
+        section_num = match.group(1)
+        section_text = match.group(2).strip()
+        return f"{section_num}.{section_text}"
+    
+    return text
