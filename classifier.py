@@ -158,19 +158,18 @@ def predict_texts_hierarchical(texts: List[str]) -> List[List[Dict]]:
     for i in range(len(texts)):
         preds = [{'id': None, 'name': '—'} for _ in range(MAX_LEVELS_CONFIG)]
         for mdl_idx, logits in enumerate(logits_list):
-            lvl_idx = mdl_idx  # Упрощенная версия без original_level_map_for_logits
+            lvl_idx = mdl_idx
             probs = torch.softmax(logits[i], dim=0)
             prob, idx = torch.max(probs, dim=0)
             preds[lvl_idx] = decode_prediction(idx.item(), prob.item(), lvl_idx)
         results.append(preds)
     return results
 
-# Основной процесс
+
 @validate_excel_file
 def process_topics(output_file: str):
     print("\nИерархическая классификация математических задач")
     try:
-        # Чтение файла
         with pd.ExcelFile(output_file) as xls:
             if TASK_SHEET_NAME not in xls.sheet_names:
                 print(f"Лист '{TASK_SHEET_NAME}' не найден в файле!")

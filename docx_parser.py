@@ -6,7 +6,10 @@ from docx import Document
 
 from ai_solution import add_ai_solution_to_excel
 from classifier import process_topics
-from constants import AUTHOR_DATA, CLASSES, DOCX_PATH, OUTPUT_FILE
+from constants import (ANSWER_COLUMN, AUTHOR_DATA, AUTHOR_SHEET_NAME, CLASSES,
+                       CLASSES_COLUMN, DOCX_PATH, ID_TASK_COLUMN, OUTPUT_FILE,
+                       PARAGRAPH_COLUMN, TASK_COLUMN, TASK_SHEET_NAME,
+                       TOC_SHEET_NAME, TRIM_CHARS)
 from decorators import validate_docx_file, validate_excel_file
 from fixes import (fix_degree_to_star, fix_difficult_tasks_symb,
                    fix_trailing_dots)
@@ -62,7 +65,7 @@ def parse_toc_to_excel(input_file:str, output_file:str):
                 'parent': last_main_section_id
             })
 
-    save_to_excel(data=sections, output_file=output_file, sheet_name='table_of_contents')
+    save_to_excel(data=sections, output_file=output_file, sheet_name=TOC_SHEET_NAME)
 
 
 @validate_docx_file
@@ -79,7 +82,7 @@ def parse_docx_to_excel(input_file:str, output_file:str):
             break
 
         cleaned_text = re.sub(r'(\d+\.\d*\.?)\s+', r'\1', text)
-        new_paragraph_id = find_matching_paragraph(cleaned_text, toc, trim_chars=5)
+        new_paragraph_id = find_matching_paragraph(cleaned_text, toc, trim_chars=TRIM_CHARS)
 
         if new_paragraph_id:
             paragraph_id = new_paragraph_id
@@ -96,35 +99,35 @@ def parse_docx_to_excel(input_file:str, output_file:str):
             if len(subtask_parts) == 1:
                 main_num, subtask_parts = fix_difficult_tasks_symb(main_num, subtask_parts, 0)
                 data.append({
-                    'id_tasks_book': main_num,
-                    'task': subtask_parts[0],
-                    'answer': '',
-                    'paragraph': paragraph_id,
-                    'classes': CLASSES,
+                    ID_TASK_COLUMN: main_num,
+                    TASK_COLUMN: subtask_parts[0],
+                    ANSWER_COLUMN: '',
+                    PARAGRAPH_COLUMN: paragraph_id,
+                    CLASSES_COLUMN: CLASSES,
                 })
             if len(subtask_parts) == 2:
                 slave_num = subtask_parts[0].replace(')', '')
                 slave_num, subtask_parts = fix_difficult_tasks_symb(slave_num, subtask_parts, 1)
                 data.append({
-                'id_tasks_book': main_num + slave_num,
-                'task': subtask_parts[1],
-                'answer': '',
-                'paragraph': paragraph_id,
-                'classes': CLASSES,
+                ID_TASK_COLUMN: main_num + slave_num,
+                TASK_COLUMN: subtask_parts[1],
+                ANSWER_COLUMN: '',
+                PARAGRAPH_COLUMN: paragraph_id,
+                CLASSES_COLUMN: CLASSES,
             })
                 
         slave_num = id_part.replace(')', '')
         if main_num.strip() != slave_num.strip():
             slave_num, task_part = fix_difficult_tasks_symb(slave_num, task_part)
             data.append({
-                'id_tasks_book': main_num + slave_num,
-                'task': task_part,
-                'answer': '',
-                'paragraph': paragraph_id,
-                'classes': CLASSES,
+                ID_TASK_COLUMN: main_num + slave_num,
+                TASK_COLUMN: task_part,
+                ANSWER_COLUMN: '',
+                PARAGRAPH_COLUMN: paragraph_id,
+                CLASSES_COLUMN: CLASSES,
             })
 
-    save_to_excel(data=data, output_file=output_file, sheet_name='tasks')
+    save_to_excel(data=data, output_file=output_file, sheet_name=TASK_SHEET_NAME)
 
 
 @validate_docx_file
@@ -166,15 +169,15 @@ def parse_answers(docx_path: str, output_file: str):
 
             answers_dict[task_id] = re.sub(r'[.,;]$', '', answer_text).strip()
 
-    tasks_df = pd.read_excel(output_file, sheet_name='tasks')
-    tasks_df['answer'] = tasks_df['id_tasks_book'].map(answers_dict).fillna('Отсутствует')
+    tasks_df = pd.read_excel(output_file, sheet_name=TASK_SHEET_NAME)
+    tasks_df[ANSWER_COLUMN] = tasks_df[ID_TASK_COLUMN].map(answers_dict).fillna('Отсутствует')
     with pd.ExcelWriter(output_file, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
-        tasks_df.to_excel(writer, index=False, sheet_name='tasks')
+        tasks_df.to_excel(writer, index=False, sheet_name=TASK_SHEET_NAME)
 
 @validate_excel_file
 def add_author(output_file:str, author_data: list[dict]):
     """Добавление к Excel файлу листа авторов."""
-    save_to_excel(data=author_data, output_file=output_file, sheet_name='author')
+    save_to_excel(data=author_data, output_file=output_file, sheet_name=AUTHOR_SHEET_NAME)
 
 
 @validate_excel_file
@@ -205,43 +208,48 @@ def process_composite_tasks(output_file: str) -> None:
         id_tasks_book | task
         '5.1'         | 'Найти сумму чисел 2 и 3'
     """
-    df: pd.DataFrame = pd.read_excel(output_file, sheet_name='tasks')
+    df: pd.DataFrame = pd.read_excel(output_file, sheet_name=TASK_SHEET_NAME)
 
     modified_df: pd.DataFrame = df.copy()
 
     main_tasks: List[str] = []
     tasks_hierarchy: Dict[str, Dict[str, Any]] = {}
     
-    for _, row in df[df['id_tasks_book'].apply(is_main_task)].iterrows():
-        main_num: str = str(row['id_tasks_book']).rstrip('.')
-        subtasks: List[str] = df[df['id_tasks_book'].apply(lambda x: is_subtask(x, main_num))]['id_tasks_book'].tolist()
+    for _, row in df[df[ID_TASK_COLUMN].apply(is_main_task)].iterrows():
+        main_num: str = str(row[ID_TASK_COLUMN]).rstrip('.')
+        subtasks: List[str] = df[df[ID_TASK_COLUMN].apply(lambda x: is_subtask(x, main_num))][ID_TASK_COLUMN].tolist()
         
         if subtasks:
-            main_tasks.append(row['id_tasks_book'])
-            tasks_hierarchy[row['id_tasks_book']] = {
+            main_tasks.append(row[ID_TASK_COLUMN])
+            tasks_hierarchy[row[ID_TASK_COLUMN]] = {
                 'subtasks': subtasks,
-                'main_condition': row['task']
+                'main_condition': row[TASK_COLUMN]
             }
 
     for main_task, data in tasks_hierarchy.items():
         main_condition: str = data['main_condition']
 
-        subtask_indices = df[df['id_tasks_book'].isin(data['subtasks'])].index
+        subtask_indices = df[df[ID_TASK_COLUMN].isin(data['subtasks'])].index
 
         for idx in subtask_indices:
-            original_task: Optional[str] = modified_df.at[idx, 'task']
+            original_task: Optional[str] = modified_df.at[idx, TASK_COLUMN]
             if pd.notna(original_task):
-                modified_df.at[idx, 'task'] = f"{main_condition} {original_task}"
+                modified_df.at[idx, TASK_COLUMN] = f"{main_condition} {original_task}"
             else:
-                modified_df.at[idx, 'task'] = main_condition
+                modified_df.at[idx, TASK_COLUMN] = main_condition
 
-    modified_df = modified_df[~modified_df['id_tasks_book'].isin(main_tasks)]
+    modified_df = modified_df[~modified_df[ID_TASK_COLUMN].isin(main_tasks)]
 
     with pd.ExcelWriter(output_file, engine='openpyxl', mode='w') as writer:
-        modified_df.to_excel(writer, sheet_name='tasks', index=False)
+        modified_df.to_excel(writer, sheet_name=TASK_SHEET_NAME, index=False)
     
     if tasks_hierarchy:
-        print(f"Обработано {len(tasks_hierarchy)} задач.")
+        print("\nБыли обработаны следующие основные задачи и их подзадачи:")
+        for main_task, data in tasks_hierarchy.items():
+            print(f"\nОсновная задача: {main_task}")
+            print(f"Условие: {data['main_condition']}")
+            print(f"Подзадачи: {', '.join(data['subtasks'])}")
+        print(f"\nОбработано {len(tasks_hierarchy)} составных задач.")
     else:
         print("Подходящих под условие обработки задач не нашлось.")
 
@@ -252,7 +260,7 @@ if __name__ == "__main__":
     add_author(OUTPUT_FILE, AUTHOR_DATA)
     parse_answers(DOCX_PATH, OUTPUT_FILE)
     process_composite_tasks(OUTPUT_FILE)
-    # add_ai_solution_to_excel(OUTPUT_FILE)
+    add_ai_solution_to_excel(OUTPUT_FILE)
     reorder_sheets(OUTPUT_FILE)
-    # process_topics(OUTPUT_FILE)
+    process_topics(OUTPUT_FILE)
     

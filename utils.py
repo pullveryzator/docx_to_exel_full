@@ -4,6 +4,8 @@ import re
 import pandas as pd
 from openpyxl import load_workbook
 
+from constants import TASK_SHEET_NAME, TOC_SHEET_NAME
+
 
 def save_to_excel(data, output_file:str, sheet_name:str):
     """Сохранение данных в Excel с автоматическим удалением существующего листа."""
@@ -19,12 +21,12 @@ def save_to_excel(data, output_file:str, sheet_name:str):
 
 
 def reorder_sheets(output_file):
-    """Переносит лист 'tasks' на первую позицию"""
+    """Переносит лист <TASK_SHEET_NAME> на первую позицию"""
     wb = load_workbook(output_file)
-    if 'tasks' not in wb.sheetnames:
-        print(f"Лист 'tasks' не найден в файле {output_file}")
+    if TASK_SHEET_NAME not in wb.sheetnames:
+        print(f"Лист {TASK_SHEET_NAME} не найден в файле {output_file}")
         return None
-    sheet = wb['tasks']
+    sheet = wb[TASK_SHEET_NAME]
     wb.remove(sheet)
     wb._sheets.insert(0, sheet)
     wb.save(output_file)
@@ -35,7 +37,7 @@ def excel_to_dict(excel_file: str):
     в котором ключи - это текст главы, а значения - столбец ID.
     Включена обработка ошибки на отсутствие нужного файла."""
     try:
-        df = pd.read_excel(excel_file, sheet_name='table_of_contents')
+        df = pd.read_excel(excel_file, sheet_name=TOC_SHEET_NAME)
         
         result_dict = dict(zip(df['name'], df['id']))
         
