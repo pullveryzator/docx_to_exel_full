@@ -174,6 +174,7 @@ def parse_answers(docx_path: str, output_file: str):
     with pd.ExcelWriter(output_file, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
         tasks_df.to_excel(writer, index=False, sheet_name=TASK_SHEET_NAME)
 
+
 @validate_excel_file
 def add_author(output_file:str, author_data: list[dict]):
     """Добавление к Excel файлу листа авторов."""
@@ -240,14 +241,13 @@ def process_composite_tasks(output_file: str) -> None:
 
     modified_df = modified_df[~modified_df[ID_TASK_COLUMN].isin(main_tasks)]
 
-    with pd.ExcelWriter(output_file, engine='openpyxl', mode='w') as writer:
-        modified_df.to_excel(writer, sheet_name=TASK_SHEET_NAME, index=False)
+    with pd.ExcelWriter(output_file, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+        modified_df.to_excel(writer, index=False, sheet_name=TASK_SHEET_NAME)
     
     if tasks_hierarchy:
         print("\nБыли обработаны следующие основные задачи и их подзадачи:")
         for main_task, data in tasks_hierarchy.items():
             print(f"\nОсновная задача: {main_task}")
-            print(f"Условие: {data['main_condition']}")
             print(f"Подзадачи: {', '.join(data['subtasks'])}")
         print(f"\nОбработано {len(tasks_hierarchy)} составных задач.")
     else:
