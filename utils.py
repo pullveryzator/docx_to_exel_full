@@ -1,4 +1,5 @@
 import os
+import re
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -15,8 +16,6 @@ def save_to_excel(data, output_file:str, sheet_name:str):
         book.save(output_file)
     with pd.ExcelWriter(output_file, engine='openpyxl', mode=mode) as writer:
         df.to_excel(writer, sheet_name=sheet_name, index=False)
-
-from openpyxl import load_workbook
 
 
 def reorder_sheets(output_file):
@@ -68,3 +67,52 @@ def find_matching_paragraph(cleaned_text: str, toc: dict, trim_chars: int = 2) -
                 return toc[key]
     
     return None
+
+
+def is_main_task(task_id: str) -> bool:
+    """Проверяет, является ли идентификатор задачи основным номером.
+    
+    Основной номер задачи должен состоять из цифр и точки в конце (например, "5.", "72.").
+
+    Args:
+        task_id: Строка с идентификатором задачи для проверки
+
+    Returns:
+        True если идентификатор соответствует формату основного номера, иначе False
+
+    Examples:
+        >>> is_main_task("5.")
+        True
+        >>> is_main_task("5.1")
+        False
+    """
+    return bool(re.fullmatch(r'^\d+\.$', str(task_id)))
+
+
+def is_subtask(task_id: str, main_num: str) -> bool:
+    """Проверяет, является ли задача подзадачей для указанного основного номера.
+
+    Подзадача должна:
+    1. Начинаться с основного номера (без точки на конце)
+    2. Содержать после точки:
+       - либо цифры (например, "5.1")
+       - либо одну русскую букву (например, "5.а")
+
+    Args:
+        task_id: Идентификатор проверяемой задачи
+        main_num: Основной номер задачи (может быть с точкой на конце)
+
+    Returns:
+        True если задача является подзадачей указанного основного номера, иначе False
+
+    Examples:
+        >>> is_subtask("5.1", "5.")
+        True
+        >>> is_subtask("5.а", "5")
+        True
+        >>> is_subtask("6.1", "5.")
+        False
+    """
+    main_num = str(main_num).rstrip('.')
+    pattern = rf'^{main_num}\.\d+$|^{main_num}\.[а-яё]$'
+    return bool(re.fullmatch(pattern, str(task_id)))

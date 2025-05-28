@@ -1,14 +1,17 @@
 import re
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from docx import Document
 
-# from ai_solution import add_ai_solution_to_excel
-# from classifier import process_topics
+from ai_solution import add_ai_solution_to_excel
+from classifier import process_topics
 from constants import AUTHOR_DATA, CLASSES, DOCX_PATH, OUTPUT_FILE
-from decorators import validate_docx_file
-from filters import fix_degree_to_star, fix_difficult_tasks_symb, filter_trailing_dots
-from utils import excel_to_dict, reorder_sheets, save_to_excel, find_matching_paragraph
+from decorators import validate_docx_file, validate_excel_file
+from fixes import (fix_degree_to_star, fix_difficult_tasks_symb,
+                   fix_trailing_dots)
+from utils import (excel_to_dict, find_matching_paragraph, is_main_task,
+                   is_subtask, reorder_sheets, save_to_excel)
 
 
 @validate_docx_file
@@ -51,7 +54,7 @@ def parse_toc_to_excel(input_file:str, output_file:str):
             subsection_num = subsection_match.group(1)
             subsection_name = subsection_match.group(2)
             full_name = f"{subsection_num}.{subsection_name}"
-            full_name = filter_trailing_dots(full_name)
+            full_name = fix_trailing_dots(full_name)
             
             sections.append({
                 'id': len(sections) + 1,
@@ -80,7 +83,7 @@ def parse_docx_to_excel(input_file:str, output_file:str):
 
         if new_paragraph_id:
             paragraph_id = new_paragraph_id
-            print(f"Найдено совпадение: {cleaned_text}")
+            print(f"Найдено совпадение c оглавлением: {cleaned_text}")
             continue
 
         if '\t' in text:
@@ -168,18 +171,87 @@ def parse_answers(docx_path: str, output_file: str):
     with pd.ExcelWriter(output_file, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
         tasks_df.to_excel(writer, index=False, sheet_name='tasks')
 
-
-def add_author(author_data: list[dict], output_file:str):
+@validate_excel_file
+def add_author(output_file:str, author_data: list[dict]):
     """Добавление к Excel файлу листа авторов."""
     save_to_excel(data=author_data, output_file=output_file, sheet_name='author')
 
+
+@validate_excel_file
+def process_composite_tasks(output_file: str) -> None:
+    """Обрабатывает составные задачи в Excel-файле, объединяя условия основных задач с подзадачами.
+
+    Функция выполняет следующие действия:
+    1. Находит все основные задачи (формата "X.") с подзадачами
+    2. Добавляет условие основной задачи в начало условия каждой подзадачи
+    3. Удаляет обработанные основные задачи из файла
+    4. Сохраняет модифицированные данные обратно в исходный файл
+
+    Args:
+        output_file: Путь к Excel-файлу с задачами. Должен содержать столбцы:
+                    - 'id_tasks_book' - идентификаторы задач
+                    - 'task' - тексты условий задач
+
+    Returns:
+        None
+
+    Examples:
+        Если в файле есть задачи:
+        id_tasks_book | task
+        '5.'          | 'Найти сумму'
+        '5.1'         | 'чисел 2 и 3'
+        
+        После обработки:
+        id_tasks_book | task
+        '5.1'         | 'Найти сумму чисел 2 и 3'
+    """
+    df: pd.DataFrame = pd.read_excel(output_file, sheet_name='tasks')
+
+    modified_df: pd.DataFrame = df.copy()
+
+    main_tasks: List[str] = []
+    tasks_hierarchy: Dict[str, Dict[str, Any]] = {}
+    
+    for _, row in df[df['id_tasks_book'].apply(is_main_task)].iterrows():
+        main_num: str = str(row['id_tasks_book']).rstrip('.')
+        subtasks: List[str] = df[df['id_tasks_book'].apply(lambda x: is_subtask(x, main_num))]['id_tasks_book'].tolist()
+        
+        if subtasks:
+            main_tasks.append(row['id_tasks_book'])
+            tasks_hierarchy[row['id_tasks_book']] = {
+                'subtasks': subtasks,
+                'main_condition': row['task']
+            }
+
+    for main_task, data in tasks_hierarchy.items():
+        main_condition: str = data['main_condition']
+
+        subtask_indices = df[df['id_tasks_book'].isin(data['subtasks'])].index
+
+        for idx in subtask_indices:
+            original_task: Optional[str] = modified_df.at[idx, 'task']
+            if pd.notna(original_task):
+                modified_df.at[idx, 'task'] = f"{main_condition} {original_task}"
+            else:
+                modified_df.at[idx, 'task'] = main_condition
+
+    modified_df = modified_df[~modified_df['id_tasks_book'].isin(main_tasks)]
+
+    with pd.ExcelWriter(output_file, engine='openpyxl', mode='w') as writer:
+        modified_df.to_excel(writer, sheet_name='tasks', index=False)
+    
+    if tasks_hierarchy:
+        print(f"Обработано {len(tasks_hierarchy)} задач.")
+    else:
+        print("Подходящих под условие обработки задач не нашлось.")
 
 if __name__ == "__main__":
 
     parse_toc_to_excel(DOCX_PATH, OUTPUT_FILE)
     parse_docx_to_excel(DOCX_PATH, OUTPUT_FILE)
-    add_author(AUTHOR_DATA, OUTPUT_FILE)
+    add_author(OUTPUT_FILE, AUTHOR_DATA)
     parse_answers(DOCX_PATH, OUTPUT_FILE)
+    process_composite_tasks(OUTPUT_FILE)
     # add_ai_solution_to_excel(OUTPUT_FILE)
     reorder_sheets(OUTPUT_FILE)
     # process_topics(OUTPUT_FILE)
