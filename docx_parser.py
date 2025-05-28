@@ -76,9 +76,10 @@ def parse_docx_to_excel(input_file:str, output_file:str):
             break
 
         cleaned_text = re.sub(r'(\d+\.\d*\.?)\s+', r'\1', text)
-        paragraph_id = find_matching_paragraph(cleaned_text, toc, trim_chars=5)
+        new_paragraph_id = find_matching_paragraph(cleaned_text, toc, trim_chars=5)
 
-        if paragraph_id:
+        if new_paragraph_id:
+            paragraph_id = new_paragraph_id
             print(f"Найдено совпадение: {cleaned_text}")
             continue
 
