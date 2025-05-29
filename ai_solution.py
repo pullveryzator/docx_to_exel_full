@@ -39,7 +39,6 @@ def get_ai_solution(task_number: int, task_text: str) -> str:
 def add_ai_solution_to_excel(file_path: str) -> None:
     """Обновляет Excel-файл, используя pandas и безопасное сохранение"""
     try:
-        # Читаем данные из Excel
         df: pd.DataFrame = pd.read_excel(
             file_path, 
             engine='openpyxl', 
@@ -62,7 +61,6 @@ def add_ai_solution_to_excel(file_path: str) -> None:
         
         print(f"Найдено {len(tasks_to_process)} задач для обработки...")
 
-        # Создаем словарь для хранения всех листов
         with pd.ExcelFile(file_path) as excel:
             all_sheets = {sheet: pd.read_excel(excel, sheet_name=sheet) 
                         for sheet in excel.sheet_names}
