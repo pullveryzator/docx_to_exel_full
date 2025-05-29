@@ -168,7 +168,7 @@ def predict_texts_hierarchical(texts: List[str]) -> List[List[Dict]]:
 
 @validate_excel_file
 def process_topics(output_file: str):
-    print("\nИерархическая классификация математических задач")
+    print("\nИерархическая классификация математических задач...")
     try:
         with pd.ExcelFile(output_file) as xls:
             if TASK_SHEET_NAME not in xls.sheet_names:

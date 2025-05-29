@@ -18,6 +18,7 @@ def save_to_excel(data, output_file:str, sheet_name:str):
         book.save(output_file)
     with pd.ExcelWriter(output_file, engine='openpyxl', mode=mode) as writer:
         df.to_excel(writer, sheet_name=sheet_name, index=False)
+    return df
 
 
 def reorder_sheets(output_file):
